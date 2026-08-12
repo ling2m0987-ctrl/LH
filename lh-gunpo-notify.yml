@@ -1,0 +1,36 @@
+name: LH 군포 공고 알림
+
+on:
+  schedule:
+    - cron: "0 */3 * * *"   # 3시간마다 (UTC 기준). 필요 시 아래 참고해서 수정
+  workflow_dispatch: {}       # Actions 탭에서 수동 실행 버튼으로 테스트 가능
+
+permissions:
+  contents: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: 의존성 설치
+        run: pip install -r requirements.txt
+
+      - name: 공고 확인 및 알림 발송
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python lh_gunpo_notifier.py
+
+      - name: 알림 발송 이력 저장 (seen.json 커밋)
+        run: |
+          git config user.name "lh-gunpo-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add seen.json
+          git diff --cached --quiet || git commit -m "update seen state [skip ci]"
+          git push
